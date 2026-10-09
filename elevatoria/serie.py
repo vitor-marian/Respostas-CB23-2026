@@ -1,4 +1,5 @@
 """Séries temporais unidimensionais como subclasse de `numpy.ndarray`."""
+
 from __future__ import annotations
 
 from typing import Sequence
@@ -31,7 +32,9 @@ class SerieTemporal(np.ndarray):
         (`np.cumsum`), sem laços. Levanta `ValueError` se `janela < 1` ou `janela > len(self)`.
         """
         if janela < 1 or janela > len(self):
-            raise ValueError(f"janela deve estar entre 1 e {len(self)}; recebi {janela}")
+            raise ValueError(
+                f"janela deve estar entre 1 e {len(self)}; recebi {janela}"
+            )
         acumulada = np.cumsum(self)
         return (acumulada[janela:] - acumulada[:-janela]) / janela
 

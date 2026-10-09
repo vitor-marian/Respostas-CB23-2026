@@ -5,6 +5,7 @@ estruturados e em séries numéricas. As funções marcadas com `NotImplementedE
 issues abertas do Marco 1; as docstrings descrevem o contrato que cada uma deve cumprir.
 Não mude nomes nem assinaturas públicas: outros módulos e os testes dependem deles.
 """
+
 from __future__ import annotations
 
 import array
@@ -29,7 +30,19 @@ from fornecido.cronometro import cronometrar
 #: dígitos) e `resto` (o restante da linha, começando por um caractere que não é espaço).
 #: As partes são separadas por um ou mais espaços. A linha inteira deve casar: o padrão é
 #: aplicado com `LINHA.fullmatch(linha)`.
-LINHA: re.Pattern = None  # type: ignore[assignment]  # TODO issue #1
+LINHA: re.Pattern = r"""
+    ^                           # Início da linha
+    (\d{4}-\d{2}-\d{2})         # Data AAAA-MM-DD
+    \s                          # Espaço em branco
+    (\d{2}:\d{2}:\d{2})         # Horário HH:MM:SS
+    \s                          # Espaço em branco
+    ([A-Z]+)                    # Nível
+    \s                          # Espaço em branco
+    ([A-Z]{1,2}\d{1,3})         # Tag
+    \s                          # Espaço em branco
+    ((\w+=\S+)\s)+              # Resto
+    $                           # Fim da linha
+"""  # type: ignore[assignment] # TODO issue #1
 
 
 @dataclass(frozen=True)
@@ -48,7 +61,7 @@ def valida_tag(s: str) -> bool:
     Use `fullmatch`. Válidas: `"PT101"`, `"FT201"`, `"B1"`. Inválidas: `"pt101"`, `"PT"`,
     `"PT1010"`, `"101PT"` e `"PT101 "` (sobra de caracteres).
     """
-    raise NotImplementedError("issue #1: valida_tag")
+    return re.fullmatch(r"^[A-Z]{1,2}\d{1,3}$", s) is not None
 
 
 def ler_log(texto: str) -> tuple[list[Registro], list[str]]:
@@ -69,7 +82,35 @@ def ler_log(texto: str) -> tuple[list[Registro], list[str]]:
       (`contagens=1623` vira `1623.0`; `evento=partida` continua `"partida"`);
     - texto vazio devolve `([], [])`.
     """
-    raise NotImplementedError("issue #1: ler_log")
+    registros = []
+    invalidas = []
+    with open(texto, "r"):
+        for l in texto:
+            if l.strip() == "":
+                continue
+            casar = LINHA.fullmatch(l)
+            if casar is not None:
+                log = [i for i in l.split()]
+                data = True
+                try:
+                    datetime.strptime(log[0], "%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    data = False
+                if data:
+                    pares = re.findall("(\\w+)=(\\S+)", log[3])
+                    if pares is not None:
+                        pares = dict(pares)
+                        for j in dict.keys(pares):
+                            try:
+                                pares[j] = float(pares[j])
+                            except ValueError:
+                                pass
+                tag = valida_tag(log[2])
+            if casar is not None and data and pares is not None and tag:
+                registros.append(Registro(data, log[1], tag, pares))
+            else:
+                invalidas.append(l)
+    return tuple[registros, invalidas]
 
 
 def por_tag(registros: list[Registro], tag: str) -> list[Registro]:
@@ -83,8 +124,7 @@ def contagem_por_tag(registros: list[Registro]) -> dict[str, int]:
     Use uma compreensão de dicionário sobre o conjunto das tags, obtido por uma compreensão
     de conjunto. Lista vazia devolve `{}`.
     """
-    raise NotImplementedError("issue #1: contagem_por_tag")
-
+    return {tag: len(por_tag(tag)) for tag in {o for o in registros}}
 
 def serie(registros: list[Registro], tag: str, chave: str) -> SerieTemporal:
     """`SerieTemporal` com o valor de `chave` dos registros da `tag` que têm essa chave.
@@ -92,7 +132,7 @@ def serie(registros: list[Registro], tag: str, chave: str) -> SerieTemporal:
     Os registros da tag sem essa chave (por exemplo, os alarmes de PT102, que não têm
     `contagens`) são ignorados. Crie a série com `SerieTemporal.de_lista`.
     """
-    raise NotImplementedError("issue #1: serie")
+    return SerieTemporal.de_lista()
 
 
 # ---------------------------------------------------------------------------------------
