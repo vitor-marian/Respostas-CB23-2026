@@ -62,3 +62,30 @@ Previsões registradas no commit: d050c9b
 ### R7 — Issue #4
 
 Sintoma: `media_movel(30)` em 600 pontos devolvia 570 valores, e não 571. Teste de regressão: `test_quantidade_de_valores`. Causa: `acumulada[i]` é a soma de `self[0..i]`, então `acumulada[janela:] - acumulada[:-janela]` começa na janela `self[1:janela+1]` e perde a primeira. Correção: pôr um `0` no início da soma acumulada. A aceitação só confere o tipo e os erros, nunca o tamanho nem os valores. Outro caso não coberto: `janela == len(self)`, que devolvia 0 valores; é coberto por `test_janela_igual_ao_tamanho`.
+
+## Marco 2
+
+### Ambiente
+
+Etapa 0 do `python marco2.py`: 
+=== Etapa 0: ambiente ===
+Python 3.14.3 | NumPy 2.5.4 | SciPy 1.18.1 | fornecido 3.0 | matrícula 3518
+
+### R8 — Derivada numérica
+
+De h = 1 até h = 1e-5 o erro cai 10x a cada passo (de 1,66e-05 para 6,2e-10), e o erro dominante é o truncamento da diferença adiante, que é proporcional a h. 
+
+Depois de 1e-5, o erro volta a crescer (5,1e-09 em 1e-6, 2,1e-01 em 1e-14), pois o dominante é o erro de arredondamento, já que `f(x + h) - f(x)` subtrai dois números quase iguais e perde algarismos significativos, então esse erro é dividido por um h cada vez menor. 
+
+Em h = 1e-14, `1000 + 1e-14 == 1000` é `True`, pois o espaçamento entre floats perto de 1000 é ~1,1e-13. Por isso `f(x + h) - f(x)` vira 0 e a aproximação vale 0, tornando o erro igual a própria derivada: 0,2134.
+
+### R9 — Issue #7
+
+* Testes de regressão: `test_acumulador_kahan_1000` e `test_acumulador_kahan_2997`. 
+* Causa: `t = soma + y` já é o resultado arredondado, por isso a conta `soma + y` é sempre o mesmo float `t`, daí `t - (soma + y)` é sempre 0. Quando `(t - soma) - y`, `t - soma` é exato e recupera a parte de `y` que de fato entrou na soma. Os testes de aceitação só somam `0.1` dez vezes e comparam com `math.isclose` e o erro da soma ingênua ali é pequeno, e o Kahan errado passa igual.
+
+### R10 — Precisão × exatidão
+
+* Precisão = dispersão das leituras em torno da própria média; Exatidão = proximidade dessa média ao valor real. 
+* Para PT102 as duas curvas têm a mesma precisão, mas exatidões bem diferentes. 
+* A média de aproximadamente 600 leituras reduz só o erro aleatório, já que seu sinal é variável e se cancela. O viés da curva linear é sistemático, note que todas as leituras por volta de 380 kPa passam pelo mesmo trecho da reta, o que erra a curva real sempre na mesma direção, assim a média converge para o valor errado.
